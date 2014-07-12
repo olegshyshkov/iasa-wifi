@@ -7,21 +7,10 @@ import os.path, time, datetime
 #if( len(sys.argv) < 1 ):
 #	sys.stderr.write("Usage: allw.py dhcp.leases");
 #	sys.exit(1)
-from macs import Mac
+#from macs import Mac
+from model import mac_status
 
 debug = False
-
-def mac_status(mac_value):
-    m = Mac.objects(mac = mac_value)
-    if( len(m) == 0):
-        new_mac = Mac(mac = mac_value, access = True)
-        new_mac.save()
-        return "ACCEPT"
-    else:
-        if( m[0].access == True ):
-            return "ACCEPT"
-        else:
-            return "DROP"
 
 class IpTablesRule:
     def __init__(self, *kargs):
