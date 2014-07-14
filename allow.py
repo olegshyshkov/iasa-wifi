@@ -7,7 +7,7 @@ import os.path, time, datetime
 #if( len(sys.argv) < 1 ):
 #	sys.stderr.write("Usage: allw.py dhcp.leases");
 #	sys.exit(1)
-#from macs import Mac
+
 from model import mac_status
 
 debug = False
