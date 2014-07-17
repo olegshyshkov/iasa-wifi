@@ -108,6 +108,7 @@ class IpTablesParser:
 class IpTables():
     def __init__(self, dhcp, chain, iface):
         self.chain = chain
+        self.iface = iface
         self.parser = IpTablesParser(dhcp, chain, iface)
         script = """sudo iptables -F {0}
                     sudo iptables -N {0}
