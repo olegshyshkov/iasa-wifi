@@ -134,7 +134,7 @@ class IpTables():
         new_rules = set(self.parser.from_dhcp())
 
         script = ""
-        script += "sudo iptables -D {} -j DROP\n".format(self.chain)
+        script += "sudo iptables -D {} -i {} -j DROP\n".format(self.chain, self.iface)
 
         for r in old_rules - new_rules:
             script += r.to_delete()
@@ -143,7 +143,7 @@ class IpTables():
             script += r.to_add()
             r.save_to_mongo()
         
-        script += "sudo iptables -A {} -j DROP\n".format(self.chain)
+        script += "sudo iptables -A {} -i {} -j DROP\n".format(self.chain, self.iface)
         return script
 
 
