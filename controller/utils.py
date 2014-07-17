@@ -1,6 +1,5 @@
 import string
-from bcrypt import hashpw
-from bottle import request
+from bottle import request,redirect,response
 from model import Session, UserGroup, User
 
 def format_mac(mac):
@@ -11,10 +10,6 @@ def format_mac(mac):
 
     mac = ':'.join([res[i:i+2] for i in range(0, len(res), 2)])
     return mac
-
-
-def is_good_password(hashpass, raw_pass):
-    return hashpw(raw_pass, hashpass) == hashpass
 
 
 def require_login(roles_require=None):
@@ -44,18 +39,26 @@ def require_login(roles_require=None):
         return tmp
     return decorator
 
+
 def check_login(username):
     print("check_login: '" + username + "'")
-    return username != ''
+    return User.objects(username=username).first() is None
+
 
 def check_password(pass1, pass2):
     return len(pass1) != 0 and pass1 == pass2
 
+
 def user_from_form(form):
     user = User(username=request.forms.get("username"))
     return user
-    #return {k: request.forms.get(k) for k in request.forms}
+
 
 def get_groups():
 	groups = [g['name'] for g in UserGroup.objects]
 	return groups
+
+
+def start_session(user):
+    session = Session(username=user['username'], user=user).save()        
+    response.set_cookie('session', str(session.id))

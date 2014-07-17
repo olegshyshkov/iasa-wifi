@@ -24,13 +24,16 @@ def login_post():
     password = request.forms.get('password')
 
     user = User.objects(username=username).first()
+    if user is None:
+        return login('Wrong login or password')
+
+
 
 #    print(user['username'], user['password'], hashpw(password.encode('utf-8'), user['password'])) # .encode('utf-8')))
     print(user['username'], user['password'], hashpw(password.encode('utf-8'), user.password)) # .encode('utf-8')))
 
-    if is_good_password(user['password'], password.encode('utf-8')):
-        session = Session(username=user['username'], user=user).save()        
-        response.set_cookie('session', str(session.id))
+    if user.is_good_password(password):
+        start_session(user)
         redirect('account')
     else:
         return login('Wrong login or password')

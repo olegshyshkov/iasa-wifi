@@ -8,7 +8,7 @@ import os.path, time, datetime
 #	sys.stderr.write("Usage: allw.py dhcp.leases");
 #	sys.exit(1)
 
-from model import mac_status
+from model import mac_status, DHCPLease
 
 debug = False
 
@@ -27,6 +27,8 @@ class IpTablesRule:
             self.jump = kargs[2]
             self.chain = kargs[3]
             self.iface = kargs[4]
+            self.starts = kargs[5]
+            self.ends = kargs[6]
         self.mac = self.mac.upper()
         
     def __str__(self):
@@ -46,7 +48,10 @@ class IpTablesRule:
     
     def __hash__(self):
         return hash(str(self))
-    
+   
+    def save_to_mongo(self):
+        DHCPLease(ip=self.ip, mac=self.mac, starts=self.starts, ends=self.ends).save()
+
 class IpTablesParser:
     def __init__(self, dhcp_lease, chain_name, iface_name):        
         self.dhcp_lease = dhcp_lease
@@ -58,6 +63,7 @@ class IpTablesParser:
             st = fd.read().split("\n")
         
         ends = ''
+        starts = ''
         mac = ''
 
         macs = dict()
@@ -72,7 +78,7 @@ class IpTablesParser:
 
                 if(ends > now or debug):
                     macs[lease] = mac
-                    rules.append(IpTablesRule(lease, mac, mac_status(mac), self.chain_name, self.iface_name))                    
+                    rules.append(IpTablesRule(lease, mac, mac_status(mac), self.chain_name, self.iface_name, starts, ends))
 
                 lease = None
                 continue
@@ -88,9 +94,10 @@ class IpTablesParser:
                 if k == "hardware ethernet":
                     mac = v
                 elif k == "ends":
-                    date = datetime.datetime.strptime(v, "%w %Y/%m/%d %H:%M:%S")
-                    now = datetime.datetime.now()
-                    ends = date
+                    ends = datetime.datetime.strptime(v, "%w %Y/%m/%d %H:%M:%S")
+                elif k == "starts":
+                    starts = datetime.datetime.strptime(v, "%w %Y/%m/%d %H:%M:%S")
+
 
         return rules
     
@@ -134,7 +141,8 @@ class IpTables():
 
         for r in new_rules - old_rules:
             script += r.to_add()
-            4
+            r.save_to_mongo()
+        
         script += "sudo iptables -A {} -j DROP\n".format(self.chain)
         return script
 

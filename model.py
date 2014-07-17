@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+from bcrypt import hashpw
 from mongoengine import *
 
 connect("iasa-wifi")
@@ -21,6 +22,7 @@ class PersonalInfo(EmbeddedDocument):
 
 class UserGroup(Document):
     name = StringField(primary_key=True)
+    access = BooleanField(default=True)
 
 #unv = UserGroup(id=b"0", name="unverified").save()
 #UserGroup(id=b"1", name="verified").save()
@@ -29,22 +31,33 @@ class UserGroup(Document):
 
 unv = UserGroup(name="unverified").save()
 UserGroup(name="verified").save()
-UserGroup(name="admin").save()
+admin = UserGroup(name="admin").save()
+UserGroup(name="blocked", access=False).save()
 
 class User(Document):
     username = StringField(primary_key=True)
     password = BinaryField()
-    access = BooleanField()
-    fake = BooleanField()    
+    fake = BooleanField()
     devices = ListField(EmbeddedDocumentField(Device))
     personal = EmbeddedDocumentField(PersonalInfo, default=PersonalInfo())
     verified = ListField(EmbeddedDocumentField(PersonalInfo))
     group = ReferenceField(UserGroup, default=unv)
 
+    def is_good_password(self, password):
+        if type(password) is str:
+            password = password.encode("utf-8")
+        return hashpw(password, self.password) == self.password
+
+
 class Session(Document):
     user = ReferenceField(User)
     username = StringField()
 
+class DHCPLease(Document):
+    ip = StringField()
+    mac = StringField()
+    starts = DateTimeField()
+    ends =  DateTimeField()
 
 #user = User(username="blage", devices=[ Device(mac="111")]).save()
 #print(User.objects(devices=Device(mac="111")))
@@ -59,13 +72,18 @@ def mac_status(mac):
         user.devices.append(Device(mac=mac))
         user.save()
     
-    if user.access:
+    if user.group.access:
         return "ACCEPT"
     else:
         return "DROP"
 
+try:
+    User(username="dummy", access=True, devices=[ ]).save(force_insert=True)
+except:
+    pass
 
-user = User(username="dummy", access=True, devices=[ ]).save()
-
-
-#print(mac_status("111"))
+try:
+    User(username="admin", group=admin, 
+        password=b'$2a$10$CV02h8R7BJSyanE3Tmb88Ojb3CrI.l6vHfckrfWOR208Gcm1q9hn.').save(force_insert=True)
+except:
+    pass

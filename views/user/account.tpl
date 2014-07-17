@@ -5,7 +5,6 @@
 
 <div id="header">
     <a href="/administration">Administation</a>
-    <a href="/statistics">Statistics</a>
     <a href="/logout">Logout</a><br>
     <h1>Hello {{ username }}!</h1>
 </div>

@@ -22,8 +22,6 @@ def verified_user(user, username):
     groups = get_groups()
     group = user.group
 
-    params = []
-
     if len(user.verified) == 0:
         verified = PersonalInfo()
     else:
