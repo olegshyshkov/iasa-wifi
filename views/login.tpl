@@ -1,8 +1,17 @@
 <!doctype html>
 <html>
-<head></head>
+<head>
+<link rel="stylesheet" type="text/css" href="style.css">
+</head>
 <body>
-    <div><a href="register">Registation</a>  <a href='change.php'>Change password</a><br></div>
+
+    <div class="nav">
+        <ul>
+            <li><a href="register">Registation</a></li>
+            <li><a href='change.php'>Change password</a><li>
+        </ul>  
+    </div>
+    
     {{err}}
 
     <div align="center">

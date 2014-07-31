@@ -12,30 +12,39 @@ def format_mac(mac):
     return mac
 
 
-def require_login(roles_require=None):
+def require_login(roles_require=None, on_login=False):
     def decorator(f):
         def access_denied(*args, **kwargs):
             return "Access denied"
 
         def tmp(*args, **kwargs):
+            def no_session():
+                if on_login:
+                    return f(*args, **kwargs)
+                else:
+                    redirect("/login")
+
             cookie = request.get_cookie("session")
             if cookie is None:
-                redirect("/login")
+                return no_session()
 
             session = Session.objects(id=cookie).first()
 
             if session is None:
-                redirect("/login")
+                return no_session()
 
             user = session.user
             if user is None:
-                redirect("/login")
+                return no_session()
 
             if roles_require is not None:
                 if user['group'].name not in roles_require:
                     return "Access denied"
 
-            return f(user, *args, **kwargs)
+            if(on_login):
+                redirect("/account")
+            else:
+                return f(user, *args, **kwargs)
         return tmp
     return decorator
 

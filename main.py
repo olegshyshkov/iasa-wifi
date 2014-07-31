@@ -4,13 +4,17 @@ import os
 import sys
 
 from bottle import run, route, view, redirect
-from bottle import template, request
+from bottle import template, request, static_file
 from controller import login, user, admin
 
 
 @route('/hello/<name>')
 def greet(name='Stranger'):
     return template('Hello {{name}}, how are you?', name=name)
+
+@route('/style.css', name='static')
+def style():
+	return static_file("style.css", root='')
 
 if __name__ == "__main__":
     #run(host='localhost', port=8080, debug=True, reloader=True)

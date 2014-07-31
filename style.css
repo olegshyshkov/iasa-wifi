@@ -1,0 +1,40 @@
+.nav li {
+    display: inline;
+    
+}
+
+.nav a {
+    padding-top: 14px;
+    padding-bottom: 14px;
+    padding-left: 10px;
+    padding-right: 10px;
+    cursor: auto;
+    text-decoration: none;
+}
+
+.nav a:hover, a:focus {
+    text-decoration: underline;
+}
+
+.container div{
+    display: block;
+    float: left;
+}
+
+
+.person {
+    width: 30%;
+
+}
+
+.person li {
+    display: block;
+}
+
+.devices {
+    width: 70%;
+}
+
+.devices li {
+    display: inline;
+}

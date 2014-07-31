@@ -14,6 +14,7 @@ def root():
 
 @route('/login')
 @view('login')
+@require_login(on_login=True)
 def login(err=''):
     return {'err': err}
 
@@ -26,8 +27,6 @@ def login_post():
     user = User.objects(username=username).first()
     if user is None:
         return login('Wrong login or password')
-
-
 
 #    print(user['username'], user['password'], hashpw(password.encode('utf-8'), user['password'])) # .encode('utf-8')))
     print(user['username'], user['password'], hashpw(password.encode('utf-8'), user.password)) # .encode('utf-8')))
