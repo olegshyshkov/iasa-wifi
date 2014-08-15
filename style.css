@@ -18,12 +18,13 @@
 
 .container div{
     display: block;
-    float: left;
+    /*float: left;*/
 }
 
 
 .person {
     width: 30%;
+    float: left;
 
 }
 
@@ -32,7 +33,21 @@
 }
 
 .devices {
-    width: 70%;
+    width: 300px;
+    float: left;
+}
+
+.curdev {
+    display: block;
+    /*float: none;*/
+    background-color: lime;
+    border-radius: 5px;
+}
+
+.curdev p {
+    text-align: center;
+    /*margin: auto;*/
+
 }
 
 .devices li {

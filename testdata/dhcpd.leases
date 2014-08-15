@@ -28,3 +28,13 @@ lease 192.168.10.92 {
   uid "\001h]C\356\330\311";
   client-hostname "user-pc";
 }
+lease 192.168.0.10 {
+  starts 2 2013/10/01 13:33:45;
+  ends 2 2013/10/01 13:35:45;
+  tstp 2 2013/10/01 13:35:45;
+  cltt 2 2013/10/01 13:33:45;
+  binding state free;
+  hardware ethernet 68:5d:43:ee:d8:c9;
+  uid "\001h]C\356\330\311";
+  client-hostname "user-pc";
+}

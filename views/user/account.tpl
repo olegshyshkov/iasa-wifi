@@ -32,14 +32,16 @@
 
     <div class="devices">
 
-        <p>Your current device with mac: ... not registred in system. Link it with this account?</p>
-        <ul>
-            <li><a href="add_device?type=tablet">Tablet</a></li>
-            <li><a href="add_device?type=mobile phone">Mobile phone</a></li>
-            <li><a href="add_device?type=laptop">Laptop</a></li>
-        </ul>
+				<div class="curdev">
+	        <p>Your current device with mac: {{mac}} not registred in system. Link it with this account?</p>
+		      <ul>
+			        <li><a href="add_device?type=tablet">Tablet</a></li>
+				      <li><a href="add_device?type=mobile phone">Mobile phone</a></li>
+					    <li><a href="add_device?type=laptop">Laptop</a></li>
+	        </ul>
+				</div>
 
-
+				<div style="float:none;">
         <form action="account_new_device" method="post">
                 Add device:
                 <input name="mac" type="text"><br>
@@ -51,8 +53,7 @@
                 </select>
                 <input type="submit" value="Add"><br><br>
         </form>
-
-        
+        </div>
         %if devices:
         Devices:
         <table border="1">

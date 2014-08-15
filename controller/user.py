@@ -4,7 +4,7 @@ from bottle import run, route, view, redirect
 from bottle import template, request
 from controller.login import require_login
 
-from model import Session, User, Device
+from model import Session, User, Device, DHCPLease
 import string
 
 from .utils import *
@@ -13,11 +13,16 @@ from .utils import *
 @view('user/account')
 @require_login()
 def account_view(user):
+    ip = request['REMOTE_ADDR']
+    mac = DHCPLease.objects(ip=ip).first().mac
+    
+    #return dhcp.ip + " " + dhcp.mac
     return {'username': user.username,
             'group': user.group.name,
             'name': user.personal.firstname + " " + user.personal.lastname,
             'study_group': user.personal.study_group,
-            'devices': user.devices}
+            'devices': user.devices, 
+            'mac': mac}
 
 @route('/account_new_device', method='post')
 @require_login()
