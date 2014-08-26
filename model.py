@@ -22,17 +22,34 @@ class PersonalInfo(EmbeddedDocument):
 
 class UserGroup(Document):
     name = StringField(primary_key=True)
-    access = BooleanField(default=True)
+    access = StringField(default='ACCEPT')
+    mark = IntField()
+    rate = StringField(default="54kbps")
+
+    def to_iptables(self):
+       # s = ':{0.name} - [0:0]\n'
+        s = 'sudo iptables -N {0.name} -t mangle\n'
+        s += 'sudo iptables -t mangle -D {0.name} -j MARK --set-mark {0.mark}\n'
+        s += 'sudo iptables -t mangle -A {0.name} -j MARK --set-mark {0.mark}\n'
+        return s.format(self)
+
+    def to_tc(self):
+        s = """sudo tc class add dev {0} parent 1: classid 1:{1.mark} htb rate {1.rate}
+sudo tc filter add dev {0} parent 1:0 prio 1 protocol ip handle {1.mark} fw flowid 1:{1.mark}
+"""
+        return s.format("{0}", self)
+
 
 #unv = UserGroup(id=b"0", name="unverified").save()
 #UserGroup(id=b"1", name="verified").save()
 #UserGroup(id=b"2", name="admin").save()
 
 
-unv = UserGroup(name="unverified").save()
-UserGroup(name="verified").save()
-admin = UserGroup(name="admin").save()
-UserGroup(name="blocked", access=False).save()
+guest = UserGroup(name="guest", mark=0x10).save()
+unv   = UserGroup(name="unverified", mark=0x20).save()
+UserGroup(name="verified", mark=0x30).save()
+UserGroup(name="admin", mark=0x40, rate="1mbps").save()
+UserGroup(name="blocked", access='DROP', mark=0x50).save()
 
 class User(Document):
     username = StringField(primary_key=True)
@@ -59,31 +76,29 @@ class DHCPLease(Document):
     starts = DateTimeField()
     ends =  DateTimeField()
 
+    #def __init__(self, ip, mac, starts, ends):
+    #    super(Document, self)
+        #self.ip = ip
+        #self.mac = mac
+        #self.starts = starts
+        #self.ends = ends
+
+
 #user = User(username="blage", devices=[ Device(mac="111")]).save()
 #print(User.objects(devices=Device(mac="111")))
 #print(user.username)
 
 def mac_status(mac):
-    user = User.objects(devices=Device(mac=mac)).first()
-
-    # TODO: DELETE IN RELEASE
+    user = User.objects(devices__mac=mac).first()
+    #print(mac, user)
     if user is None:
-        user = User.objects(username="dummy").first()  
-        user.devices.append(Device(mac=mac))
-        user.save()
-    
-    if user.group.access:
-        return "ACCEPT"
+        return guest
     else:
-        return "DROP"
+        return user.group
 
-try:
-    User(username="dummy", access=True, devices=[ ]).save(force_insert=True)
-except:
-    pass
 
 try:
     User(username="admin", group=admin, 
-        password=b'$2a$10$CV02h8R7BJSyanE3Tmb88Ojb3CrI.l6vHfckrfWOR208Gcm1q9hn.').save(force_insert=True)
+        password=b'$2a$10$7TbBBEtcV01.1OLQo96xROnyy2dP4/xey.hl0RC8sGawH5Iaj1OSS').save(force_insert=True)
 except:
     pass

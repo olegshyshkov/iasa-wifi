@@ -9,12 +9,22 @@ import string
 
 from .utils import *
 
+
+def get_user_mac():
+    ip = request['REMOTE_ADDR']
+    dhcp = DHCPLease.objects(ip=ip).first()
+    if dhcp is not None:
+        mac = dhcp.mac
+    else:
+        mac = None
+    return mac
+
+
 @route('/account')
 @view('user/account')
 @require_login()
 def account_view(user):
-    ip = request['REMOTE_ADDR']
-    mac = DHCPLease.objects(ip=ip).first().mac
+    mac = get_user_mac()  
     
     #return dhcp.ip + " " + dhcp.mac
     return {'username': user.username,
@@ -24,13 +34,16 @@ def account_view(user):
             'devices': user.devices, 
             'mac': mac}
 
-@route('/account_new_device', method='post')
+@route('/add_device', method='post')
 @require_login()
 def account_post(user):
     mac = request.forms.get('mac')
+    if mac is None:
+        mac = get_user_mac()
+        #redirect('/account')
     mac = format_mac(mac)
     typ = request.forms.get('type')
-
+    print(mac, typ)
     if mac is not None:        
         user.devices.append(Device(mac=mac, typ=typ))
         user.save()
