@@ -55,90 +55,72 @@ def from_dhcp(dhcp_lease):
 
     return rules
 
+
+from pymongo import MongoClient
+client = MongoClient('localhost', 27017)
+db = client['iasa-wifi']
+user = db.user
+
+class Group():
+    def __init__(self, name):
+        self.name = name
+        self.access = "ACCEPT"
+
+def mac_status(doc):
+    if(doc == None):
+        jump = Group('guest')
+    else:
+        jump = Group(doc['group'])
+    return jump
+
 def make_script(dhcp):
+    print("make_script")
     templ = [
-             ('filter', "-A INPUT --src {0} -m mac --mac-source {1} -j {2}"),
-             ('filter', "-A FORWARD --src {0} -m mac --mac-source {1} -j {2}"),
-             ('mangle', "-A FORWARD --src {0} -j {2}"),
-             ('mangle', "-A FORWARD --dst {0} -j {2}")
+            ('filter', "-A INPUT --src {0} -m mac --mac-source {1} -j {2}"),
+            ('filter', "-A FORWARD --src {0} -m mac --mac-source {1} -j {2}"),
+            ('mangle', "-A FORWARD --src {0} -j {2}"),
+            ('mangle', "-A FORWARD --dst {0} -j {2}")
             ]
 
     iptb = {"mangle": [], "filter": []}
-
+    i = 0
     for lease in dhcp:
-        jump = mac_status(lease.mac)
-        print(lease.mac, jump, jump.name, jump.access)        
-        #for (table, rule) in templ:
-        #    iptb[table].append(rule.format(ip, mac, jump))
-            
-            
+        doc = user.find_one({"devices": {"mac": lease.mac}})
+
+        jump = mac_status(doc)
+#        print(lease.mac, jump, jump.name, jump.access)
+
         iptb['mangle'] += ["-A FORWARD --src {0} -j {2}".format(lease.ip, lease.mac, jump.name)]
         iptb['mangle'] += ["-A FORWARD --dst {0} -j {2}".format(lease.ip, lease.mac, jump.name)]
-        iptb['filter'] += ["-A allow_inet --src {0} -m mac --mac-source {1} -j {2}".format(lease.ip, lease.mac, jump.access)]
-        #iptb['filter'] += ["-A INPUT --src {0} -m mac --mac-source {1} -j {2}".format(ip, mac, jump.access)]
-        #iptb['filter'] += ["-A FORWARD --src {0} -m mac --mac-source {1} -j {2}".format(ip, mac, jump.access)]
+        iptb['filter'] += ["-A allow-inet --src {0} -m mac --mac-source {1} -j {2}".format(lease.ip, lease.mac, jump.access)]
 
     script = ''
     script += '*mangle\n'
-
-#    for o in UserGroup.objects:
- #       script += o.to_iptables()
-
     script += '\n'.join(iptb['mangle'])
     script += '\nCOMMIT\n'
 
-
     script += '*filter\n'
-    script += ':allow_inet - [0:0]\n'
-    #script += '-F allow_inet\n'.format(in_iface)
+    script += ':allow-inet - [0:0]\n'
     script += '\n'.join(iptb['filter']) + '\n'
-    #script += '-A FORWARD -j allow_inet\n'
-    #script += '-A INPUT -j allow_inet\n'
-    script += '-A allow_inet -i {0} -j DROP\n'.format(in_iface)
-    
-    script += 'COMMIT\n'
 
+    script += 'COMMIT\n'
+#    print(script)
     return script
 
 def apply_script(script):
+    print("apply_script")
     fd = os.popen("sudo iptables-restore --noflush", "w")
     fd.write(script)
     fd.close()
 
-def prepare_iptables():
-    script = []
-    script += ['FORWARD -j allow_inet']
-    script += ['INPUT -j allow_inet']
-    
-    script = ''.join(
-        ['sudo iptables -D ' + s + '\n' for s in script] + 
-        ['sudo iptables -A ' + s + '\n' for s in script]
-        )
-
-    for o in UserGroup.objects:
-        script += o.to_iptables()
-
-    print(script)
-    os.system(script)
-
-
-def prepare_tc():
-    script =  """sudo tc qdisc del dev {0} root\nsudo tc qdisc add dev {0} root handle 1: htb\n"""
-    for o in UserGroup.objects:
-        script += o.to_tc()
-
-  #  print(script)
-    os.system(script.format(in_iface))
-    os.system(script.format(out_iface))
-    
-
 def save_dhcp(dhcp, last):
-    last = datetime.datetime.utcfromtimestamp(last - 3)
+    print("save_dhcp")
+    last = datetime.datetime.utcfromtimestamp(last - 3)    
     #print("Last: ", last)
     for lease in dhcp:
-        print(lease.starts, last)
+        #print(lease.starts, last)
         if(lease.starts >= last):
-            print("save")
+            #print("save")
             lease.save()
 
 def main():
@@ -148,13 +130,10 @@ def main():
         print("DEBUG mode")
         debug = True
 
-    prepare_tc()
-    prepare_iptables()
-   # return;
     lastmtime = 3
     while 1:
         (mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime) = os.stat(dhcp_lease)
-        
+
         if lastmtime == mtime:
             time.sleep(1)
             continue
@@ -168,10 +147,9 @@ def main():
             print(script)
         apply_script(script)       
 
-
         lastmtime = mtime
 
         print ("last modified: %s" % mtime)
-
+        #return
 if __name__ == "__main__":
     main()

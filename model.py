@@ -28,10 +28,10 @@ class UserGroup(Document):
 
     def to_iptables(self):
        # s = ':{0.name} - [0:0]\n'
-        s = 'sudo iptables -N {0.name} -t mangle\n'
-        s += 'sudo iptables -t mangle -D {0.name} -j MARK --set-mark {0.mark}\n'
-        s += 'sudo iptables -t mangle -A {0.name} -j MARK --set-mark {0.mark}\n'
-        return s.format(self)
+        script = ['-N {0.name} -t mangle']
+        script += ['-t mangle -D {0.name} -j MARK --set-mark {0.mark}']
+        script += ['-t mangle -A {0.name} -j MARK --set-mark {0.mark}']
+        return [s.format(self) for s in script]
 
     def to_tc(self):
         s = """sudo tc class add dev {0} parent 1: classid 1:{1.mark} htb rate {1.rate}
@@ -48,7 +48,7 @@ sudo tc filter add dev {0} parent 1:0 prio 1 protocol ip handle {1.mark} fw flow
 guest = UserGroup(name="guest", mark=0x10).save()
 unv   = UserGroup(name="unverified", mark=0x20).save()
 UserGroup(name="verified", mark=0x30).save()
-UserGroup(name="admin", mark=0x40, rate="1mbps").save()
+admin = UserGroup(name="admin", mark=0x40, rate="1mbps").save()
 UserGroup(name="blocked", access='DROP', mark=0x50).save()
 
 class User(Document):
@@ -89,6 +89,7 @@ class DHCPLease(Document):
 #print(user.username)
 
 def mac_status(mac):
+#    return guest
     user = User.objects(devices__mac=mac).first()
     #print(mac, user)
     if user is None:
