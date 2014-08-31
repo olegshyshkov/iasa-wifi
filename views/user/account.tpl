@@ -21,6 +21,16 @@
 </div>
 
 <div class="container">
+    <div class="social">
+        <ul>
+            <li><a href="{{fb_url}}">{{fb_name}}</a></li>
+            <li><a href="{{g_url}}">{{g_name}}</a></li>
+            <li><a href="{{vk_url}}">{{vk_name}}</a></li>
+        </ul>
+    </div>
+
+
+
     <div class="person">
         <ul>
             <li>Group: {{group}} </li>

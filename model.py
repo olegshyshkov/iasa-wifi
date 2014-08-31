@@ -19,15 +19,15 @@ class PersonalInfo(EmbeddedDocument):
     icq = StringField(default="")
     phone_number = StringField(default="")
 
-    def from_request(self, request):
-        self.first_name = request.forms.get('first_name')
-        self.last_name = request.forms.get('last_name')
-        self.middle_name = request.forms.get('middle_name')
-        self.study_group = request.forms.get('study_group')
-        self.email = request.forms.get('email')
-        self.skype = request.forms.get('skype')
-        self.icq = request.forms.get('icq')
-        self.phone_number = request.forms.get('phone_number')
+    def from_dict(self, data):
+        self.first_name = data['first_name']
+        self.last_name = data['last_name']
+        self.middle_name = data['middle_name']
+        self.study_group = data['study_group']
+        self.email = data['email']
+        self.skype = data['skype']
+        self.icq = data['icq']
+        self.phone_number = data['phone_number']
 
 class UserGroup(Document):
     name = StringField(primary_key=True)
@@ -69,34 +69,29 @@ class User(Document):
     personal = EmbeddedDocumentField(PersonalInfo, default=PersonalInfo())
     verified = ListField(EmbeddedDocumentField(PersonalInfo))
     group = ReferenceField(UserGroup, default=unv)
-    vk_id = StringField()
-    fb_id = StringField()
-    g_id = StringField()
+    vk_id = StringField(default="")
+    fb_id = StringField(default="")
+    g_id = StringField(default="")    
 
     def is_good_password(self, password):
         if type(password) is str:
             password = password.encode("utf-8")
         return hashpw(password, self.password) == self.password
 
-    def from_request(self, request):
-        self.username = request.forms.get('username')
-        pass1 = request.forms.get('pass1')
+
+    def from_dict(self, data):
+        self.username = data['username']
+        pass1 = data['password1']
         self.password = hashpw(pass1.encode('utf-8'), gensalt(10))
-        uid = request.forms.get('uid').split(":", 1)
+        uid = data['uid'].split(":", 1)
         if uid[0] == 'vk':
             self.vk_id = uid[1]
         elif uid[0] == 'fb':
             self.fb_id = uid[1]
         elif uid[0] == 'g':
             self.g_id = uid[1]
-        self.personal.from_request(request)
+        self.personal.from_dict(data)
 
-
-
-class Session(Document):
-    session_id = StringField()
-    user = ReferenceField(User)
-    username = StringField()
 
 class DHCPLease(Document):
     ip = StringField()
@@ -104,22 +99,8 @@ class DHCPLease(Document):
     starts = DateTimeField()
     ends =  DateTimeField()
 
-    #def __init__(self, ip, mac, starts, ends):
-    #    super(Document, self)
-        #self.ip = ip
-        #self.mac = mac
-        #self.starts = starts
-        #self.ends = ends
-
-
-#user = User(username="blage", devices=[ Device(mac="111")]).save()
-#print(User.objects(devices=Device(mac="111")))
-#print(user.username)
-
 def mac_status(mac):
-#    return guest
     user = User.objects(devices__mac=mac).first()
-    #print(mac, user)
     if user is None:
         return guest
     else:

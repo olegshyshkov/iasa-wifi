@@ -4,11 +4,11 @@ from bottle import run, route, view, redirect
 from bottle import template, request
 from controller.login import require_login
 
-from model import Session, User, Device, DHCPLease
+from model import User, Device, DHCPLease
 import string
 
 from .utils import *
-
+from .social import fb, vk, g
 
 def get_user_mac():
     ip = request['REMOTE_ADDR']
@@ -26,13 +26,36 @@ def get_user_mac():
 def account_view(user):
     mac = get_user_mac()  
     
+
+    if user.fb_id == '':
+        fb_name, fb_url = ("Connect with facebook", fb.fb_get_url('/fbconnect'))
+    else:
+        fb_name, fb_url = ("Disconect from facebook", '/fbdisconnect')
+
+
+    if user.g_id == '':
+        g_name, g_url = ("Connect with google", g.g_get_url('/gconnect'))
+    else:
+        g_name, g_url = ("Disconect from google", '/gdisconnect')
+
+
+    if user.vk_id == '':
+        vk_name, vk_url = ("Connect with vk", vk.vk_get_url('/vkconnect'))
+    else:
+        vk_name, vk_url = ("Disconect from vk", '/vkdisconnect')
+
+
     #return dhcp.ip + " " + dhcp.mac
     return {'username': user.username,
             'group': user.group.name,
-            'name': user.personal.firstname + " " + user.personal.lastname,
+            'name': user.personal.first_name + " " + user.personal.last_name,
             'study_group': user.personal.study_group,
             'devices': user.devices, 
-            'mac': mac}
+            'mac': mac,
+            'user': user,
+            'fb_url': fb_url, 'fb_name': fb_name,
+            'g_url': g_url, 'g_name': g_name,
+            'vk_url': vk_url, 'vk_name': vk_name}
 
 @route('/add_device', method='post')
 @require_login()

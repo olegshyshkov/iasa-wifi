@@ -83,7 +83,8 @@
 </style>
 
 <body>
-
+	{{err}}
+	<a href="register">Register</a>
 	<form action="passlogin" method="POST">
 		<div class="login-form">
 			<div class="msg">{{err}}</div>
