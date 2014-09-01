@@ -16,6 +16,13 @@ def greet(name='Stranger'):
 def style():
 	return static_file("style.css", root='')
 
+@route('/<name>.jpeg', name='static')
+def jpeg():
+    return static_file(name + '.jpeg', root="")
+
+@route('/<name>.gif', name='static')
+def jpeg(name):
+    return static_file('/img/' + name + '.gif', root="")
 
 if __name__ == "__main__":
     #run(host='localhost', port=8080, debug=True, reloader=True)
