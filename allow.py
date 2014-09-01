@@ -78,7 +78,7 @@ class IpTablesParser:
 
                 if(ends > now or debug):
                     macs[lease] = mac
-                    rules.append(IpTablesRule(lease, mac, mac_status(mac), self.chain_name, self.iface_name, starts, ends))
+                    rules.append(IpTablesRule(lease, mac, mac_status(mac).access, self.chain_name, self.iface_name, starts, ends))
 
                 lease = None
                 continue
