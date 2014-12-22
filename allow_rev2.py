@@ -96,6 +96,7 @@ def make_script(dhcp):
 
     script = ''
     script += '*mangle\n'
+    script += '-F FORWARD\n'
     script += '\n'.join(iptb['mangle'])
     script += '\nCOMMIT\n'
 
