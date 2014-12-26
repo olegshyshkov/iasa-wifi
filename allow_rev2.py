@@ -31,7 +31,7 @@ def from_dhcp(dhcp_lease):
         if line == '}' and lease:
             now = datetime.datetime.utcnow()               
 
-            if(ends > now or debug):
+            if(ends > now): # or debug):
                 rules.append(DHCPLease(ip=lease, mac=mac, starts=starts, ends=ends))
 
             lease = None
@@ -97,12 +97,12 @@ def make_script(dhcp):
     script = ''
     script += '*mangle\n'
     script += '-F FORWARD\n'
-    script += '\n'.join(iptb['mangle'])
+    script += '\n'.join(list(set(iptb['mangle'])))
     script += '\nCOMMIT\n'
 
     script += '*filter\n'
     script += ':allow-inet - [0:0]\n'
-    script += '\n'.join(iptb['filter']) + '\n'
+    script += '\n'.join(list(set(iptb['filter']))) + '\n'
 
     script += 'COMMIT\n'
 #    print(script)
