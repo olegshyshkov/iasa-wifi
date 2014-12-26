@@ -4,76 +4,63 @@ import sys
 import re
 import os
 import os.path, time, datetime
+import argparse
 #if( len(sys.argv) < 1 ):
 #	sys.stderr.write("Usage: allw.py dhcp.leases");
 #	sys.exit(1)
 
 from model import mac_status, DHCPLease, UserGroup
 
-in_iface = 'eth1'
-out_iface = 'eth0'
-
-debug = False
-
-def from_dhcp(dhcp_lease):
-    with open(dhcp_lease, "r") as fd:
-        st = fd.read().split("\n")
-    
-    ends = ''
-    starts = ''
-    mac = ''
-
-    rules = []
-    for line in st:
-        if not line or line.startswith("#"):
-            continue
-
-        if line == '}' and lease:
-            now = datetime.datetime.utcnow()               
-
-            if(ends > now or debug):
-                rules.append(DHCPLease(ip=lease, mac=mac, starts=starts, ends=ends))
-
-            lease = None
-            continue
-
-        m = re.search(r'lease\s*([0-9\.]+)\s*\{', line)
-        if m:
-            lease = m.groups()[0]
-            continue
-
-        m = re.search(r'\s+([a-z\s\-]+)\s+\"?(.+?)?\"?\;', line)
-        if m:
-            k, v = m.groups()
-            if k == "hardware ethernet":
-                mac = v
-            elif k == "ends":
-                ends = datetime.datetime.strptime(v, "%w %Y/%m/%d %H:%M:%S")
-            elif k == "starts":
-                starts = datetime.datetime.strptime(v, "%w %Y/%m/%d %H:%M:%S")
-
-    return rules
-
-
 from pymongo import MongoClient
 client = MongoClient('localhost', 27017)
 db = client['iasa-wifi']
 user = db.user
 
-class Group():
-    def __init__(self, name):
-        self.name = name
-        self.access = "ACCEPT"
+in_iface = 'eth1'
+out_iface = 'eth0'
 
-def mac_status(doc):
+def load_dhcp(dhcp_lease):
+    with open(dhcp_lease, "r") as fd:
+        return fd.read().split("\n")
+
+# mac_cache = dict()
+# TODO
+# add caching
+def mac_status(mac, cur_time):
+    # if mac in mac_cache and mac_cache[mac].time < 
+    doc = user.find_one({"devices": {"mac": mac}}, {"group": True})
     if(doc is None):
-        jump = Group('guest')
+        return ('guest', 'ACCEPT')
+    elif(doc['group'] == 'blocked'):
+        return ('blocked', 'DROP')
     else:
-        jump = Group(doc['group'])
-    return jump
+        return (doc['group'], 'ACCEPT')
+
+def from_dhcp(st, cur_time=datetime.datetime.utcnow()):
+    rules = []
+    for line in st:
+        line = line.strip()
+
+        if line.startswith("lease"):
+            m = re.search(r'lease\s*([0-9\.]+)\s*\{', line)
+            ip = m.groups()[0]
+        elif line.startswith("hardware ethernet"):
+            mac = line[18:35]
+        elif line.startswith("starts"):
+            starts = datetime.datetime.strptime(line[7:28], "%w %Y/%m/%d %H:%M:%S")
+        elif line.startswith("ends"):
+            ends = datetime.datetime.strptime(line[5:26], "%w %Y/%m/%d %H:%M:%S")
+        elif line.startswith("}") and ip:
+            if(ends > cur_time):
+                group, access = mac_status(mac, cur_time)
+                rules.append((ip, mac, group, access))
+            ip = None
+
+    # rules = list(set(rules))
+    return rules
 
 def make_script(dhcp):
-    print("make_script")
+    # print("make_script")
     templ = [
             ('filter', "-A INPUT --src {0} -m mac --mac-source {1} -j {2}"),
             ('filter', "-A FORWARD --src {0} -m mac --mac-source {1} -j {2}"),
@@ -83,15 +70,10 @@ def make_script(dhcp):
 
     iptb = {"mangle": [], "filter": []}
     i = 0
-    for lease in dhcp:
-        doc = user.find_one({"devices": {"mac": lease.mac}}, {"group": True})
-
-        jump = mac_status(doc)
-#        print(lease.mac, jump, jump.name, jump.access)
-
-        iptb['mangle'].append("-A FORWARD --src {0} -j {2}".format(lease.ip, lease.mac, jump.name))
-        iptb['mangle'].append("-A FORWARD --dst {0} -j {2}".format(lease.ip, lease.mac, jump.name))
-        iptb['filter'].append("-A allow-inet --src {0} -m mac --mac-source {1} -j {2}".format(lease.ip, lease.mac, jump.access))
+    for (ip, mac, group, access) in dhcp:
+        iptb['mangle'].append("-A FORWARD --src {0} -j {2}".format(ip, mac, group))
+        iptb['mangle'].append("-A FORWARD --dst {0} -j {2}".format(ip, mac, group))
+        iptb['filter'].append("-A allow-inet --src {0} -m mac --mac-source {1} -j {2}".format(ip, mac, access))
 
     script = ''
     script += '*mangle\n'
@@ -103,7 +85,6 @@ def make_script(dhcp):
     script += '\n'.join(iptb['filter']) + '\n'
 
     script += 'COMMIT\n'
-#    print(script)
     return script
 
 def apply_script(script):
@@ -122,33 +103,52 @@ def save_dhcp(dhcp, last):
             #print("save")
             lease.save()
 
+
+import time
+
 def main():
-    dhcp_lease = sys.argv[1]
-    global debug
-    if(len(sys.argv) == 3 and sys.argv[2] == "debug"):
-        print("DEBUG mode")
-        debug = True
+    parser = argparse.ArgumentParser(description="")
+    parser.add_argument('lease_filename', type=str)
+    parser.add_argument('--debug', const=True, default=False, action='store_const', help='enable debug mode')
+    parser.add_argument('--profile', const=True, default=False, action='store_const', help='enable profiler mode')
+
+    args = parser.parse_args()
+
+
+    # dhcp_lease = sys.argv[1]
+    # global debug
+    # if(len(sys.argv) == 3 and sys.argv[2] == "debug"):
+        # print("DEBUG mode")
+        # debug = True
 
     lastmtime = 3
     while 1:
-        (mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime) = os.stat(dhcp_lease)
+        (mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime) = os.stat(args.lease_filename)
 
         if lastmtime == mtime:
             time.sleep(1)
-            continue
+            # continue
 
-        dhcp = from_dhcp(dhcp_lease)
-        save_dhcp(dhcp, lastmtime)
+        start = time.time()
 
-        script = make_script(dhcp)
+        lines = load_dhcp(args.lease_filename)
 
-        if(debug):
-            print(script)
-        apply_script(script)       
+        leases = from_dhcp(lines, datetime.datetime.fromtimestamp(lastmtime))
+        
+        
+        script = make_script(leases)
+        
+        end = time.time()       
 
-        lastmtime = mtime
+        if(args.debug):
+            print("Loaded", len(leases), "leases")
+            print("Time spend", end - start)
+            print ("last modified: %s" % mtime)
+        else:
+            apply_script(script)
+            save_dhcp(leases, lastmtime)
 
-        print ("last modified: %s" % mtime)
-        #return
+        # lastmtime = mtime
+ 
 if __name__ == "__main__":
     main()
