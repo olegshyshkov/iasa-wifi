@@ -137,7 +137,7 @@ class DHCP:
     def apply_script(self, script):
         # print("apply_script")
         fd = os.popen("sudo iptables-restore --noflush", "w")
-        print(script)
+        # print(script)
         fd.write(script)
         fd.close()
 
