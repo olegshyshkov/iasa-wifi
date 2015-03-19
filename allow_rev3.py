@@ -96,8 +96,8 @@ class DHCP:
             elif line.startswith("}") and ip:
                 if(ends > cur_time):
                     group, access = self.mac_status(mac, cur_time)
-                    # rules.append((ip, mac, group, access))
-                    rules.append((ip, mac, starts, ends))
+                    rules.append((ip, mac, group, access))
+                    # rules.append((ip, mac, starts, ends))
                 ip = None
 
         rules = list(set(rules))
@@ -137,6 +137,7 @@ class DHCP:
     def apply_script(self, script):
         # print("apply_script")
         fd = os.popen("sudo iptables-restore --noflush", "w")
+        print(script)
         fd.write(script)
         fd.close()
 
