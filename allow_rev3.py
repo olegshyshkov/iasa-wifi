@@ -39,12 +39,13 @@ class DHCP:
         if cur_time is None:
             cur_time = dt.utcnow()
 
-        life_time = (cur_time - self.mac_cache[mac].time).total_seconds()
-        if mac in self.mac_cache and life_time < self.CACHE_TIME:
+        life_time = (cur_time - self.mac_cache[mac].time).total_seconds() \
+            if mac in self.mac_cache else 2 * self.CACHE_TIME
+
+        if life_time < self.CACHE_TIME:
             return self.mac_cache[mac].val
         else:
             doc = self.user.find_one({"devices": {"mac": mac}}, {"group": True})
-            # doc = None
             if doc is None:
                 res = ('guest', 'ACCEPT')
             elif doc['group'] == 'blocked':
